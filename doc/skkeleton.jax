@@ -6,14 +6,19 @@ License: zlib
 ==============================================================================
 INTRODUCTION                                          *skkeleton-introduction*
 
-*skkeleton* は |denops.vim| を利用したSKK環境を提供します。
+*skkeleton* はSKK環境を提供します。
+
+このブランチではエンジンをVim9 scriptで実装しているため、Denoと
+|denops.vim|は不要です。Deno版はdenops/以下に残してあり、移植の参照元と
+して使っています。
+
+Deno専用の辞書ソース(skk_server, deno_kv, google_japanese_input)と
+ddc.vimのソースは移植していません。
 
 REQUIRED                                                  *skkeleton-required*
 
-基本的に作者が最新のVimを利用しているため古いバージョンのVimでの動作は
-保証しませんが、テストはVim v9.1.1646 Neovim 0.11.3 以降で動かしているので
-それ以降であれば動くと思います。
-他の条件は|denops.vim|に準拠します。
+Vim 9.2以降が必要です(Vim9のクラスと名前空間形式の:importを使用)。
+Neovimは対象外です。Deno版の必要条件は|denops.vim|に準拠します。
 
 ==============================================================================
 INTERFACE                                                *skkeleton-interface*
