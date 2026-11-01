@@ -1,14 +1,10 @@
 // Generates expected values for the Vim9 script dictionary tests from the
 // TypeScript implementation.  Run from the repository root:
 //   DENO_DIR="$(pwd)/.deno" deno run -A --config deno.json tools/gen/gen_dict_expect.ts
-import {
-  Library,
-  wrapDictionary,
-} from "../../denops/skkeleton/dictionary.ts";
+import { Library, wrapDictionary } from "../../denops/skkeleton/dictionary.ts";
 import { Dictionary as SkkDictionary } from "../../denops/skkeleton/sources/skk_dictionary.ts";
 import { Dictionary as UserDictionary } from "../../denops/skkeleton/sources/user_dictionary.ts";
 import encoding from "npm:encoding-japanese@^2.4.0";
-
 
 const root = new URL("../../", import.meta.url).pathname;
 const testdata = root + "denops/skkeleton/testdata/";
@@ -51,11 +47,53 @@ async function convert(pattern: string, entry: string): Promise<string> {
 }
 
 const numberValues = [
-  0, 1, 2, 5, 9, 10, 11, 12, 19, 20, 21, 30, 42, 89, 90, 99, 100, 101, 110,
-  111, 123, 200, 999, 1000, 1001, 1010, 1100, 1234, 9999, 10000, 10001,
-  12345, 99999, 100000, 123456, 1000000, 1000001, 1234567, 10000000,
-  12345678, 100000000, 123456789, 1000000000, 1234567890, 1000000000000,
-  1234567890123, 9999999999999,
+  0,
+  1,
+  2,
+  5,
+  9,
+  10,
+  11,
+  12,
+  19,
+  20,
+  21,
+  30,
+  42,
+  89,
+  90,
+  99,
+  100,
+  101,
+  110,
+  111,
+  123,
+  200,
+  999,
+  1000,
+  1001,
+  1010,
+  1100,
+  1234,
+  9999,
+  10000,
+  10001,
+  12345,
+  99999,
+  100000,
+  123456,
+  1000000,
+  1000001,
+  1234567,
+  10000000,
+  12345678,
+  100000000,
+  123456789,
+  1000000000,
+  1234567890,
+  1000000000000,
+  1234567890123,
+  9999999999999,
 ];
 
 type NumTable = Record<string, string>;
@@ -95,13 +133,15 @@ const patterns: [string, string][] = [
   ["foo#", "foo9"],
 ];
 for (const n of numberValues) {
-  for (const [name, pattern] of [
-    ["toKifu", "#9"],
-    ["toZenkaku", "#1"],
-    ["toKanjiModern", "#2"],
-    ["toKanjiClassic", "#3"],
-    ["toDaiji", "#5"],
-  ] as const) {
+  for (
+    const [name, pattern] of [
+      ["toKifu", "#9"],
+      ["toZenkaku", "#1"],
+      ["toKanjiModern", "#2"],
+      ["toKanjiClassic", "#3"],
+      ["toDaiji", "#5"],
+    ] as const
+  ) {
     number[name][String(n)] = await convert(pattern, String(n));
   }
 }
@@ -142,7 +182,9 @@ async function user(path?: string, rankPath?: string) {
   return dic;
 }
 
-async function tmpFiles(): Promise<{ dir: string; path: string; rank: string }> {
+async function tmpFiles(): Promise<
+  { dir: string; path: string; rank: string }
+> {
   const dir = await Deno.makeTempDir({ prefix: "skkeleton-dict-test-" });
   return { dir, path: dir + "/user.skk", rank: dir + "/rank.json" };
 }
@@ -367,7 +409,11 @@ await run("ranks", async () => {
 
 // Write {text} as EUC-JP or Shift_JIS bytes, the way an SKK dictionary file
 // from the wild is encoded.
-function writeJisFile(path: string, text: string, to: "EUCJP" | "SJIS"): string {
+function writeJisFile(
+  path: string,
+  text: string,
+  to: "EUCJP" | "SJIS",
+): string {
   const bytes = encoding.convert(text, {
     to,
     from: "UNICODE",
@@ -399,7 +445,11 @@ await run("saveContent", async () => {
     dic.registerHenkanResult("okurinasi", "あ", "亜");
     await dic.save();
     const data = await Deno.readTextFile(path);
-    return { before, data, line: data.split("\n").find((v) => v.startsWith("あ")) };
+    return {
+      before,
+      data,
+      line: data.split("\n").find((v) => v.startsWith("あ")),
+    };
   } finally {
     await Deno.remove(tmp.dir, { recursive: true });
   }
@@ -553,7 +603,18 @@ await run("eucMapping", async () => {
   const tmp = await tmpFiles();
   try {
     const eucKey = [
-      0xa1, 0xc1, 0xa1, 0xc2, 0xa1, 0xdd, 0xa1, 0xf1, 0xa1, 0xf2, 0xa2, 0xcc,
+      0xa1,
+      0xc1,
+      0xa1,
+      0xc2,
+      0xa1,
+      0xdd,
+      0xa1,
+      0xf1,
+      0xa1,
+      0xf2,
+      0xa2,
+      0xcc,
     ];
     const bytes = [
       ...new TextEncoder().encode(

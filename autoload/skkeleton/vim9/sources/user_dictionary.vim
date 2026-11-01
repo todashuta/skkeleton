@@ -251,11 +251,13 @@ export class Dictionary
     var tables = [this.okuriAri, this.okuriNasi]
     var keys = [this.okuriAriKeys, this.okuriNasiKeys]
     var mode = -1
-    # Note: unlike the global dictionary the user dictionary has always been
-    #       written by skkeleton itself, so it is UTF-8 by definition.  The
-    #       detector is still asked in case someone kept an old EUC-JP file.
+    # Note: the TypeScript version reads the user dictionary with
+    #       Deno.readTextFile(), i.e. as UTF-8, and the file is only ever
+    #       written by this plugin.  The encoding is therefore not detected:
+    #       detection has to guess and a wrong guess would turn every reading
+    #       into garbage (and the next save would write the garbage back).
     var data = substitute(
-      util.ReadFileWithEncoding(path, ''), "\r\n", "\n", 'g')
+      util.ReadFileWithEncoding(path, 'utf-8'), "\r\n", "\n", 'g')
     for line in split(data, "\n")
       if line ==# OkuriAriMarker
         mode = 0

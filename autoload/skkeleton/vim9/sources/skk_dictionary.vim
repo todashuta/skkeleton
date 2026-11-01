@@ -166,12 +166,14 @@ export class Dictionary
 
   # Read a text dictionary whose encoding was not given in the configuration.
   #
-  # Note: util.DetectEncoding() decides UTF-8 from what Vim makes of bytes it
-  #       cannot decode, but a lot of EUC-JP byte pairs also happen to be
-  #       valid UTF-8 sequences (they turn into unrelated CJK code points), so
-  #       a large EUC-JP dictionary can be taken for UTF-8 and read as
-  #       garbage.  Each candidate is therefore parsed and the readings are
-  #       inspected; the first one that looks like an SKK dictionary wins.
+  # Note: util.DetectEncoding() returns the empty string both for "this is
+  #       UTF-8" and for "no candidate decoded cleanly", and its check counts
+  #       any character in U+0080..U+00FF as a failure.  A real SKK-JISYO.L
+  #       holds ¢, £ and ¬ after a correct EUC-JP conversion, so it is
+  #       rejected and ReadFileWithEncoding() hands back the raw bytes, which
+  #       parse as garbage readings.  Each candidate is therefore parsed and
+  #       the readings are inspected; the first one that looks like an SKK
+  #       dictionary wins.
   def LoadDetected(path: string): void
     for candidate in ['utf-8', 'euc-jp', 'shift_jis']
       this.LoadString(FixJisMapping(
