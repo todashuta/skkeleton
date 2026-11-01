@@ -18,11 +18,27 @@ It's heavily inspired by [ddskk](https://github.com/skk-dev/ddskk) and
 
 See [doc](https://github.com/vim-skk/skkeleton/tree/main/doc/skkeleton.jax)
 
-# Requirements
+# Vim9 script implementation
 
-This plugin is using [denops.vim](https://github.com/vim-denops/denops.vim).
+This branch replaces the Deno/denops engine with Vim9 script. The engine
+(state machine, kana input, henkan, dictionaries, completion) lives in
+`autoload/skkeleton/vim9/` and runs inside Vim, so neither Deno nor
+[denops.vim](https://github.com/vim-denops/denops.vim) is needed.
 
-~~Required version is the same as `denops.vim`.~~ Required Deno 1.42.0+ now.
+- Required: Vim 9.2 or above (Vim9 classes and the namespaced `:import`)
+- Not ported: the Deno-only sources (`skk_server`, `deno_kv`,
+  `google_japanese_input`) and the ddc.vim sources under
+  `denops/@ddc-sources/`. `skk_dictionary` and the user dictionary are.
+- The TypeScript implementation under `denops/` is kept as the reference: the
+  two are diffed by `test/vim9/run.sh` (generate `test/vim9/expected.json`
+  with `tools/gen/gen_expected.ts` first) and by `test/run_dictionary.sh`.
+
+Neovim is not supported by this implementation (Vim9 classes and `:import`).
+
+# Requirements of the Deno implementation
+
+The TypeScript implementation under `denops/` is using
+[denops.vim](https://github.com/vim-denops/denops.vim). Required Deno 1.42.0+.
 
 # License
 

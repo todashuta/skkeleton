@@ -1,2 +1,11 @@
 /.tools
 /doc/tags*
+# Deno cache (the home cache is read-only in this environment)
+/.deno/
+# Scratch scripts used while porting
+/.probe/
+# Generated test output
+/test/vim9/actual.txt
+/test/vim9/impl.log
+/test/vim9/buffer.txt
+/test/actual/

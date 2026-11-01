@@ -1,3 +1,8 @@
+" Note: notation.vim builds the tables in its own script scope on the first
+"       call into it, but map() reads the globals directly; source it here so
+"       that the first key press after startup finds them.
+runtime! autoload/skkeleton/notation.vim
+
 augroup skkeleton-internal
   autocmd!
   autocmd User skkeleton* :
@@ -95,55 +100,28 @@ function! skkeleton#is_enabled() abort
   return g:skkeleton#enabled
 endfunction
 
-" `denops#plugin#wait()`はVimで入力を吸うので自前でそれらしき物を実装する
-" 吸うなら吸うで戻せばいいのだ
-function s:wait() abort
-  let chars = ''
-  while !denops#plugin#is_loaded('skkeleton')
-    " Note: 吸わないと`<C-c>`の受け付けができないらしい
-    let chars ..= getcharstr(0)
-    " Note: Neovimではsleepを挟まないとRPCが実行されない
-    sleep 1m
-  endwhile
-  call feedkeys(chars, 'it')
-endfunction
-
+" Note: the implementation lives in Vim9 script now, so there is nothing to
+" wait for: a request is a plain function call.  skkeleton#request() is kept
+" because a vimrc may still call it, and dispatches what it knows.
 function! skkeleton#request(funcname, args) abort
-  call s:wait()
-  return denops#request('skkeleton', a:funcname, a:args)
-endfunction
-
-function! s:send_notify() abort
-  let pending = get(s:, 'pending_notify', [])
-  let s:pending_notify = []
-
-  for [funcname, args] in pending
-    call denops#notify('skkeleton', funcname, args)
-  endfor
+  if a:funcname ==# 'handle'
+    return call('skkeleton#vim9#main#Handle', a:args)
+  elseif a:funcname ==# 'getConfig'
+    return skkeleton#vim9#main#GetConfig()
+  elseif a:funcname ==# 'getPreEdit'
+    return skkeleton#vim9#main#GetPreEdit()
+  elseif a:funcname ==# 'initialize'
+    return skkeleton#vim9#main#Init()
+  endif
+  throw '[skkeleton] unsupported request: ' .. a:funcname
 endfunction
 
 function! skkeleton#request_async(funcname, args) abort
-  if denops#plugin#is_loaded('skkeleton')
-    call denops#request('skkeleton', a:funcname, a:args)
-  else
-    call s:notify_later(a:funcname, a:args)
-  endif
+  return call('skkeleton#request', [a:funcname, a:args])
 endfunction
 
 function! skkeleton#notify_async(funcname, args) abort
-  if denops#plugin#is_loaded('skkeleton')
-    call denops#notify('skkeleton', a:funcname, a:args)
-  else
-    call s:notify_later(a:funcname, a:args)
-  endif
-endfunction
-
-function! s:notify_later(funcname, args) abort
-  let s:pending_notify = add(get(s:, 'pending_notify', []), [a:funcname, a:args])
-  augroup skkeleton-notify
-    autocmd!
-    autocmd User DenopsPluginPost:skkeleton ++once call s:send_notify()
-  augroup END
+  return call('skkeleton#request', [a:funcname, a:args])
 endfunction
 
 function! skkeleton#config(config) abort
@@ -155,21 +133,21 @@ function! skkeleton#config(config) abort
     endif
     let s:completion_backend = a:config.completionBackend
   endif
-  call skkeleton#request_async('config', [a:config])
+  call skkeleton#vim9#main#SetConfig(a:config)
 endfunction
 
 function! skkeleton#register_keymap(state, key, func_name)
   " normalize notation
   let key = skkeleton#notation#normalize(a:key)
-  call skkeleton#request_async('registerKeyMap', [a:state, key, a:func_name])
+  call skkeleton#vim9#function#keymap#RegisterKeyMap(a:state, key, a:func_name)
 endfunction
 
 function! skkeleton#register_kanatable(table_name, table, create=v:false) abort
-  call skkeleton#request_async('registerKanaTable', [a:table_name, a:table, a:create])
+  call skkeleton#vim9#kana#RegisterKanaTable(a:table_name, a:table, a:create)
 endfunction
 
 function! skkeleton#register_kanatable_file(table_name, path, encoding='', create=v:false) abort
-  call skkeleton#request_async('registerKanaTableFile', [a:table_name, a:path, a:encoding, a:create])
+  call skkeleton#vim9#kana#LoadKanaTableFile(a:table_name, a:path, a:encoding, a:create)
 endfunction
 
 let s:completion_backends = {}
@@ -262,7 +240,7 @@ function! skkeleton#handle(func, opts) abort
   else
     let opts.key = ['']
   endif
-  let ret = skkeleton#request('handle', [a:func, opts, skkeleton#vim_status()])
+  let ret = skkeleton#vim9#main#Handle(a:func, opts, skkeleton#vim_status())
 
   let g:skkeleton#state = ret.state
 
@@ -292,7 +270,7 @@ function! skkeleton#handle(func, opts) abort
 endfunction
 
 function! skkeleton#get_config() abort
-  return denops#request('skkeleton', 'getConfig', [])
+  return skkeleton#vim9#main#GetConfig()
 endfunction
 
 let s:complete_items = []
@@ -301,12 +279,7 @@ let s:completing = {}
 
 function! skkeleton#completefunc(findstart, base) abort
   if a:findstart
-    " Note: skkeleton#requestのs:wait()はdenopsが起動するまで戻らないため、
-    " 起動していない場合は待たずに補完を諦める
-    if !denops#plugin#is_loaded('skkeleton')
-      return -3
-    endif
-    let preedit = skkeleton#request('getPreEdit', [])
+    let preedit = skkeleton#vim9#main#GetPreEdit()
     let start = col('.') - strlen(preedit) - 1
     " Note: 補完で確定した直後などpre-editとバッファがずれている状態では、
     " 開始位置が無関係なテキストを指してしまい補完がそれを消してしまう
@@ -316,7 +289,7 @@ function! skkeleton#completefunc(findstart, base) abort
     endif
     " Note: 候補が空のまま開始位置を返すとVimが'Pattern not found'を出すため、
     " 候補はここで取得して無ければ補完自体を取り消す
-    let s:complete_items = skkeleton#request('getCompleteItems', [])
+    let s:complete_items = skkeleton#vim9#main#GetCompleteItems()
     if empty(s:complete_items)
       return -3
     endif
@@ -359,8 +332,8 @@ function! skkeleton#complete_done() abort
 
   call s:remove_marker_henkan(completing)
 
-  call skkeleton#request_async('completeCallback',
-  \ [metadata.midasi, metadata.word, metadata.type, metadata.inserted])
+  call skkeleton#vim9#main#CompleteCallback(
+  \ metadata.midasi, metadata.word, metadata.type, metadata.inserted)
 endfunction
 
 function! s:completed_item_metadata() abort
@@ -471,8 +444,34 @@ function! skkeleton#restore_point(lnum, col) abort
   call cursor(a:lnum, a:col)
 endfunction
 
+function! s:mode_changed() abort
+  autocmd SafeState * ++once call s:safe_state()
+endfunction
+
+function! s:safe_state() abort
+  if mode() ==# 'n'
+    call skkeleton#vim9#main#Reset()
+    call skkeleton#disable()
+  endif
+endfunction
+
+function! s:leave() abort
+  call skkeleton#vim9#main#Reset()
+  call skkeleton#disable()
+endfunction
+
 function! skkeleton#initialize() abort
-  call skkeleton#notify_async('initialize', [])
+  call skkeleton#vim9#main#Init()
+  augroup skkeleton-internal-main
+    autocmd!
+    " Note: reset the state once insert mode is left: CmdlineEnter would break
+    "       the dictionary registration and <C-o> (niI) would undo it too
+    "       early, so ModeChanged :n is used, and the SafeState trampoline
+    "       keeps a plugin's own ModeChanged from tearing the state down.
+    autocmd ModeChanged *:n call s:mode_changed()
+    " Note: switching windows in insert mode leaves the state behind.
+    autocmd WinLeave * call s:leave()
+  augroup END
 endfunction
 
 function! skkeleton#disable()
@@ -498,5 +497,7 @@ endfunction
 function! skkeleton#update_database(path, ...) abort
   let encoding = a:0 > 0 ? a:1 : ''
   let force = a:0 > 1 ? a:2 : v:false
-  call skkeleton#notify_async('updateDatabase', [a:path, encoding, force])
+  " Note: only the Deno-only deno_kv source has a database to update, and
+  "       this implementation does not support it.
+  echoerr '[skkeleton] updateDatabase is not supported by the Vim9 script implementation'
 endfunction
